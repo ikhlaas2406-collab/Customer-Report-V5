@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Daily Customer Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #7c5cbf;
+    --green: #22c55e;
+    --green-dim: #16a34a22;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --display: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding-bottom: 120px;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #1a1d27 0%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 16px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .app-title {
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .app-title span { color: var(--accent); }
+
+  .date-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    white-space: nowrap;
+  }
+
+  .weather-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #7dd3fc;
+    background: #0c2233;
+    border: 1px solid #1e4060;
+    border-radius: 6px;
+    padding: 4px 8px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .stats-row::-webkit-scrollbar { display: none; }
+
+  .stat-chip {
+    flex-shrink: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+
+  .stat-chip .num {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .stat-chip.green .num { color: var(--green); }
+  .stat-chip.amber .num { color: var(--amber); }
+  .stat-chip.purple .num { color: #a78bfa; }
+
+  /* ── Customer list ── */
+  .list-container { padding: 12px 12px 0; display: flex; flex-direction: column; gap: 8px; }
+
+  .customer-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .customer-card.checked-in {
+    border-color: #22c55e55;
+    box-shadow: 0 0 0 1px #22c55e22, inset 0 0 0 1px #22c55e11;
+    background: linear-gradient(135deg, #1a2720 0%, #1a1d27 100%);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .customer-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    width: 22px;
+    flex-shrink: 0;
+    text-align: center;
+  }
+
+  .customer-name {
+    flex: 1;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .customer-name::placeholder { color: var(--muted); font-weight: 400; }
+
+  .checkin-btn {
+    flex-shrink: 0;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-family: var(--display);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .checkin-btn.idle {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .checkin-btn.active {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #fff;
+    box-shadow: 0 2px 12px #22c55e44;
+  }
+
+  .checkin-btn:active { transform: scale(0.95); }
+
+  .time-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid #22c55e33;
+    border-radius: 6px;
+    padding: 3px 7px;
+    flex-shrink: 0;
+  }
+
+  /* ── Expanded section ── */
+  .card-body {
+    border-top: 1px solid var(--border);
+    padding: 12px 14px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    animation: slideDown 0.15s ease;
+  }
+
+  .card-body.open { display: flex; }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .toggle-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .toggle-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .toggle-group { flex: 1; }
+
+  .toggle-btns {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .toggle-btns button {
+    flex: 1;
+    border: none;
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .toggle-btns button + button { border-left: 1px solid var(--border); }
+
+  .toggle-btns button.sel-yes {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #fff;
+  }
+
+  .toggle-btns button.sel-no {
+    background: linear-gradient(135deg, #991b1b, #ef4444);
+    color: #fff;
+  }
+
+  .toggle-btns button:active { opacity: 0.8; }
+
+  .notes-field {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 9px 12px;
+    resize: none;
+    width: 100%;
+    outline: none;
+    min-height: 60px;
+    transition: border-color 0.2s;
+  }
+
+  .notes-field::placeholder { color: var(--muted); }
+  .notes-field:focus { border-color: var(--accent); }
+
+  .done-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .done-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--muted);
+    user-select: none;
+  }
+
+  .done-check input { display: none; }
+
+  .check-box {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    background: var(--surface2);
+  }
+
+  .done-check input:checked + .check-box {
+    background: var(--green);
+    border-color: var(--green);
+  }
+
+  .check-box svg { opacity: 0; transition: opacity 0.15s; }
+  .done-check input:checked + .check-box svg { opacity: 1; }
+
+  .expand-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
+  }
+  .expand-btn:hover { color: var(--text); background: var(--surface2); }
+
+  /* ── Bottom action bar ── */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .action-btns { display: flex; gap: 8px; }
+
+  .btn-copy, .btn-reset {
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-family: var(--display);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-copy {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 4px 20px #4f8ef744;
+  }
+
+  .btn-copy:active { transform: scale(0.97); }
+
+  .btn-reset {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    flex: 0 0 auto;
+    padding: 14px 18px;
+  }
+
+  .copy-flash {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    height: 0;
+    overflow: hidden;
+    transition: height 0.2s;
+  }
+
+  .copy-flash.show { height: 16px; }
+
+  /* ── Section label ── */
+  .section-label {
+    padding: 8px 12px 2px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="app-title">Customer <span>Report</span></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+      <div class="date-badge" id="dateBadge"></div>
+      <div class="weather-badge" id="weatherBadge">⏳ …</div>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-chip green"><span class="num" id="statIn">0</span> Checked In</div>
+    <div class="stat-chip amber"><span class="num" id="statRedir">0</span> Redirected</div>
+    <div class="stat-chip purple"><span class="num" id="statInt">0</span> Interested</div>
+    <div class="stat-chip"><span class="num" id="statDone">0</span> Done</div>
+  </div>
+</header>
+
+<div class="section-label">Customers — tap a row to expand</div>
+<div class="list-container" id="customerList"></div>
+
+<div style="padding: 20px 12px 8px; display: flex; justify-content: center;">
+  <button onclick="confirmReset()" style="
+    background: transparent;
+    border: 1px solid #ef444455;
+    color: #ef4444;
+    border-radius: 12px;
+    padding: 12px 32px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    max-width: 400px;
+    letter-spacing: 0.3px;
+    transition: all 0.15s;
+  " onmousedown="this.style.background='#ef444422'" onmouseup="this.style.background='transparent'">
+    ↺ Reset Day
+  </button>
+</div>
+
+<div style="padding: 12px 12px 0;">
+  <div style="
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  ">Extra Notes</div>
+  <textarea id="extraNotes" placeholder="Add extra notes to include in the report..." style="
+    background: #1a1d27;
+    border: 1px solid #2e3350;
+    border-radius: 10px;
+    color: #e8eaf0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 12px;
+    resize: none;
+    width: 100%;
+    outline: none;
+    min-height: 70px;
+    transition: border-color 0.2s;
+  " onfocus="this.style.borderColor='#4f8ef7'" onblur="this.style.borderColor='#2e3350'"></textarea>
+</div>
+
+<div class="bottom-bar">
+  <div class="action-btns">
+    <button class="btn-copy" onclick="copyReport()">📋 Copy Report Text</button>
+    <button class="btn-reset" onclick="confirmReset()" title="Reset all">↺</button>
+  </div>
+  <div class="copy-flash" id="copyFlash">✓ Copied to clipboard!</div>
+</div>
+
+<script>
+const STORAGE_KEY = 'nicotine_report_v2';
+const TOTAL = 20;
+
+// ── State ──────────────────────────────────────────────────────────────────
+let customers = loadState();
+
+function defaultCustomers() {
+  return Array.from({length: TOTAL}, (_, i) => ({
+    name: `Customer ${i + 1}`,
+    checkedIn: false,
+    timeIn: '',
+    redirected: null,  // null | 'Yes' | 'No'
+    interested: null,
+    notes: '',
+    done: false,
+    expanded: false,
+  }));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Validate it's the right shape
+      if (Array.isArray(parsed) && parsed.length === TOTAL) return parsed;
+    }
+  } catch(e) {}
+  return defaultCustomers();
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(customers)); } catch(e) {}
+}
+
+// ── Date ──────────────────────────────────────────────────────────────────
+function formatDate(d) {
+  return d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'});
+}
+
+document.getElementById('dateBadge').textContent = formatDate(new Date());
+
+// ── Live Montreal Weather (Open-Meteo, no API key) ────────────────────────
+let weatherShort = '';
+
+const WMO = {
+  0:'Sunny', 1:'Mainly Clear', 2:'Partly Cloudy', 3:'Overcast',
+  45:'Foggy', 48:'Icy Fog',
+  51:'Light Drizzle', 53:'Drizzle', 55:'Heavy Drizzle',
+  61:'Light Rain', 63:'Rain', 65:'Heavy Rain',
+  71:'Light Snow', 73:'Snow', 75:'Heavy Snow', 77:'Snow Grains',
+  80:'Showers', 81:'Showers', 82:'Heavy Showers',
+  85:'Snow Showers', 86:'Heavy Snow Showers',
+  95:'Thunderstorm', 96:'Thunderstorm+Hail', 99:'Heavy Thunderstorm'
+};
+
+const WMO_ICON = {
+  0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️',
+  45:'🌫️', 48:'🌫️',
+  51:'🌦️', 53:'🌦️', 55:'🌧️',
+  61:'🌧️', 63:'🌧️', 65:'🌧️',
+  71:'🌨️', 73:'❄️', 75:'❄️', 77:'❄️',
+  80:'🌧️', 81:'🌧️', 82:'⛈️',
+  85:'🌨️', 86:'🌨️',
+  95:'⛈️', 96:'⛈️', 99:'⛈️'
+};
+
+async function fetchWeather() {
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=45.5017&longitude=-73.5673&current=temperature_2m,weather_code&temperature_unit=celsius&timezone=America%2FToronto';
+    const res = await fetch(url);
+    const data = await res.json();
+    const temp = Math.round(data.current.temperature_2m);
+    const code = data.current.weather_code;
+    const desc = WMO[code] || 'Unknown';
+    const icon = WMO_ICON[code] || '🌡️';
+    weatherShort = `${temp}°C ${desc}`;
+    document.getElementById('weatherBadge').textContent = `${icon} ${weatherShort}`;
+  } catch(e) {
+    document.getElementById('weatherBadge').textContent = '⚠️ Weather unavailable';
+    weatherShort = '';
+  }
+}
+
+fetchWeather();
+setInterval(fetchWeather, 10 * 60 * 1000); // refresh every 10 min
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render() {
+  const list = document.getElementById('customerList');
+  list.innerHTML = '';
+  customers.forEach((c, i) => list.appendChild(buildCard(c, i)));
+  updateStats();
+}
+
+function buildCard(c, i) {
+  const card = document.createElement('div');
+  card.className = 'customer-card' + (c.checkedIn ? ' checked-in' : '');
+  card.id = `card-${i}`;
+
+  // ── Top row ──
+  const top = document.createElement('div');
+  top.className = 'card-top';
+
+  const num = document.createElement('div');
+  num.className = 'customer-num';
+  num.textContent = String(i + 1).padStart(2, '0');
+
+  const nameInput = document.createElement('input');
+  nameInput.className = 'customer-name';
+  nameInput.value = c.name;
+  nameInput.placeholder = `Customer ${i + 1}`;
+  nameInput.addEventListener('change', e => { customers[i].name = e.target.value || `Customer ${i + 1}`; saveState(); });
+
+  const rightGroup = document.createElement('div');
+  rightGroup.style.display = 'flex';
+  rightGroup.style.alignItems = 'center';
+  rightGroup.style.gap = '6px';
+  rightGroup.style.flexShrink = '0';
+
+  if (c.checkedIn && c.timeIn) {
+    const timeTag = document.createElement('div');
+    timeTag.className = 'time-tag';
+    timeTag.textContent = c.timeIn;
+    rightGroup.appendChild(timeTag);
+  }
+
+  const btn = document.createElement('button');
+  btn.className = 'checkin-btn ' + (c.checkedIn ? 'active' : 'idle');
+  btn.innerHTML = c.checkedIn ? '✓ In' : 'Check In';
+  btn.addEventListener('click', () => toggleCheckIn(i));
+
+  const expandBtn = document.createElement('button');
+  expandBtn.className = 'expand-btn';
+  expandBtn.textContent = c.expanded ? '▲' : '▼';
+  expandBtn.addEventListener('click', () => toggleExpand(i));
+
+  rightGroup.appendChild(btn);
+  rightGroup.appendChild(expandBtn);
+
+  top.appendChild(num);
+  top.appendChild(nameInput);
+  top.appendChild(rightGroup);
+
+  // ── Body ──
+  const body = document.createElement('div');
+  body.className = 'card-body' + (c.expanded ? ' open' : '');
+
+  // Toggle row
+  const toggleRow = document.createElement('div');
+  toggleRow.className = 'toggle-row';
+  toggleRow.appendChild(buildToggle(i, 'redirected', 'Redirected?', c.redirected));
+  toggleRow.appendChild(buildToggle(i, 'interested', 'Interested?', c.interested));
+
+  // Notes
+  const notesLabel = document.createElement('div');
+  notesLabel.className = 'toggle-label';
+  notesLabel.textContent = 'Notes';
+
+  const notes = document.createElement('textarea');
+  notes.className = 'notes-field';
+  notes.placeholder = 'Add notes here...';
+  notes.value = c.notes;
+  notes.rows = 2;
+  notes.addEventListener('input', e => { customers[i].notes = e.target.value; saveState(); updateStats(); });
+
+  // Done row
+  const doneRow = document.createElement('div');
+  doneRow.className = 'done-row';
+
+  const doneLabel = document.createElement('label');
+  doneLabel.className = 'done-check';
+  const doneInput = document.createElement('input');
+  doneInput.type = 'checkbox';
+  doneInput.checked = c.done;
+  doneInput.addEventListener('change', e => { customers[i].done = e.target.checked; saveState(); updateStats(); });
+  const checkBox = document.createElement('div');
+  checkBox.className = 'check-box';
+  checkBox.innerHTML = `<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><polyline points="1,5 4,8 11,1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  doneLabel.appendChild(doneInput);
+  doneLabel.appendChild(checkBox);
+  doneLabel.appendChild(document.createTextNode('Mark as done'));
+  doneRow.appendChild(doneLabel);
+
+  body.appendChild(toggleRow);
+  body.appendChild(notesLabel);
+  body.appendChild(notes);
+  body.appendChild(doneRow);
+
+  card.appendChild(top);
+  card.appendChild(body);
+  return card;
+}
+
+function buildToggle(i, field, label, value) {
+  const group = document.createElement('div');
+  group.className = 'toggle-group';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'toggle-label';
+  lbl.textContent = label;
+
+  const btns = document.createElement('div');
+  btns.className = 'toggle-btns';
+
+  const yes = document.createElement('button');
+  yes.textContent = 'Yes';
+  yes.className = value === 'Yes' ? 'sel-yes' : '';
+  yes.addEventListener('click', () => { customers[i][field] = customers[i][field] === 'Yes' ? null : 'Yes'; saveState(); updateStats(); rerenderCard(i); });
+
+  const no = document.createElement('button');
+  no.textContent = 'No';
+  no.className = value === 'No' ? 'sel-no' : '';
+  no.addEventListener('click', () => { customers[i][field] = customers[i][field] === 'No' ? null : 'No'; saveState(); updateStats(); rerenderCard(i); });
+
+  btns.appendChild(yes);
+  btns.appendChild(no);
+  group.appendChild(lbl);
+  group.appendChild(btns);
+  return group;
+}
+
+function rerenderCard(i) {
+  const old = document.getElementById(`card-${i}`);
+  const newCard = buildCard(customers[i], i);
+  old.replaceWith(newCard);
+}
+
+function toggleCheckIn(i) {
+  const c = customers[i];
+  if (!c.checkedIn) {
+    c.checkedIn = true;
+    c.expanded = true;
+    // Auto-fill current time
+    const now = new Date();
+    c.timeIn = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  } else {
+    c.checkedIn = false;
+    c.timeIn = '';
+  }
+  saveState();
+  updateStats();
+  rerenderCard(i);
+}
+
+function toggleExpand(i) {
+  customers[i].expanded = !customers[i].expanded;
+  saveState();
+  rerenderCard(i);
+}
+
+function updateStats() {
+  document.getElementById('statIn').textContent   = customers.filter(c => c.checkedIn).length;
+  document.getElementById('statRedir').textContent = customers.filter(c => c.redirected === 'Yes').length;
+  document.getElementById('statInt').textContent   = customers.filter(c => c.interested === 'Yes').length;
+  document.getElementById('statDone').textContent  = customers.filter(c => c.done).length;
+}
+
+// ── Copy report ───────────────────────────────────────────────────────────
+function copyReport() {
+  const date = formatDate(new Date());
+  const lines = [
+    ...(weatherShort ? [weatherShort] : []),
+  ];
+
+  const checked = customers.filter(c => c.checkedIn);
+  if (checked.length === 0) {
+    lines.push('No customers checked in yet.');
+  } else {
+    checked.forEach((c, idx) => {
+      const redir = c.redirected || '–';
+      const displayName = c.name.replace(/^Customer\s+(\d+)$/i, 'CX$1');
+      let line = `${displayName} |${c.timeIn || '–'}| Redirected: ${redir}`;
+      if (c.interested) line += ` | Interested: ${c.interested}`;
+      if (c.notes.trim()) line += ` | ${c.notes.trim()}`;
+      if (c.done) line += ' ✓';
+      lines.push(line);
+    });
+  }
+
+  const extraNotes = document.getElementById('extraNotes').value.trim();
+  if (extraNotes) lines.push(extraNotes);
+
+  const text = lines.join('\n');
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showCopied);
+  } else {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showCopied();
+  }
+}
+
+function showCopied() {
+  const el = document.getElementById('copyFlash');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function confirmReset() {
+  if (confirm('Reset all customer data for today?')) {
+    customers = defaultCustomers();
+    saveState();
+    render();
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
