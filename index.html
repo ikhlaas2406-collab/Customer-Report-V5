@@ -418,6 +418,57 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Traffic Slider ── */
+  .traffic-wrap {
+    padding: 12px 12px 0;
+  }
+
+  .traffic-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .traffic-track {
+    position: relative;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .traffic-option {
+    flex: 1;
+    text-align: center;
+    padding: 9px 2px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    transition: color 0.2s;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .traffic-option.selected { color: #fff; }
+
+  .traffic-thumb {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    border-radius: 7px;
+    transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1), background 0.3s;
+    z-index: 0;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -459,6 +510,19 @@
   " onmousedown="this.style.background='#ef444422'" onmouseup="this.style.background='transparent'">
     ↺ Reset Day
   </button>
+</div>
+
+<div class="traffic-wrap">
+  <div class="traffic-label">🚦 How was the traffic?</div>
+  <div class="traffic-track" id="trafficTrack">
+    <div class="traffic-thumb" id="trafficThumb"></div>
+    <div class="traffic-option" data-index="0" onclick="setTraffic(0)">None</div>
+    <div class="traffic-option" data-index="1" onclick="setTraffic(1)">Very Low</div>
+    <div class="traffic-option" data-index="2" onclick="setTraffic(2)">Low</div>
+    <div class="traffic-option" data-index="3" onclick="setTraffic(3)">Regular</div>
+    <div class="traffic-option" data-index="4" onclick="setTraffic(4)">High</div>
+    <div class="traffic-option" data-index="5" onclick="setTraffic(5)">Very High</div>
+  </div>
 </div>
 
 <div style="padding: 12px 12px 0;">
@@ -756,8 +820,10 @@ function updateStats() {
 // ── Copy report ───────────────────────────────────────────────────────────
 function copyReport() {
   const date = formatDate(new Date());
+  const trafficLine = trafficIndex >= 0 ? `Traffic: ${TRAFFIC_LABELS[trafficIndex]}` : '';
   const lines = [
     ...(weatherShort ? [weatherShort] : []),
+    ...(trafficLine ? [trafficLine] : []),
   ];
 
   const checked = customers.filter(c => c.checkedIn);
@@ -809,6 +875,42 @@ function confirmReset() {
     render();
   }
 }
+
+
+// ── Traffic ──────────────────────────────────────────────────────────────
+const TRAFFIC_LABELS = ['None', 'Very Low', 'Low', 'Regular', 'High', 'Very High'];
+const TRAFFIC_COLORS = ['#6b7280','#22d3ee','#22c55e','#f59e0b','#f97316','#ef4444'];
+let trafficIndex = -1; // -1 = nothing selected
+
+function setTraffic(idx) {
+  trafficIndex = (trafficIndex === idx) ? -1 : idx; // tap same = deselect
+  renderTraffic();
+}
+
+function renderTraffic() {
+  const options = document.querySelectorAll('.traffic-option');
+  const thumb   = document.getElementById('trafficThumb');
+  const track   = document.getElementById('trafficTrack');
+
+  options.forEach((el, i) => {
+    el.classList.toggle('selected', i === trafficIndex);
+  });
+
+  if (trafficIndex === -1) {
+    thumb.style.opacity = '0';
+    return;
+  }
+
+  const total = options.length;
+  const pct   = 100 / total;
+  thumb.style.opacity  = '1';
+  thumb.style.left     = `calc(${trafficIndex * pct}% + 3px)`;
+  thumb.style.width    = `calc(${pct}% - 6px)`;
+  thumb.style.background = TRAFFIC_COLORS[trafficIndex];
+  thumb.style.boxShadow  = `0 0 10px ${TRAFFIC_COLORS[trafficIndex]}66`;
+}
+
+renderTraffic();
 
 // ── Init ──────────────────────────────────────────────────────────────────
 render();
